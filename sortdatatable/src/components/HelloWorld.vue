@@ -1,5 +1,5 @@
 <template>
-  <div class="hello">
+  <div class="hello" id="printMe">
     <h1>{{ msg }}</h1>
     <p>
       For a guide and recipes on how to configure / customize this project,<br>
@@ -27,6 +27,20 @@
       <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
       <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
     </ul>
+    <div>
+    <!-- SOURCE -->
+
+    <!-- OUTPUT -->
+    <button @click="print">Print Button</button>
+    <ag-grid-vue
+    style="width: 500px; height: 200px"
+    class="ag-theme-alpine"
+    :columnDefs="columnDefs"
+    @grid-ready="onGridReady"
+    :rowData="rowData"
+  >
+  </ag-grid-vue>
+  </div>
     <table>
     <thead>
       <tr>
@@ -50,20 +64,96 @@
 </template>
 
 <script>
+
+import Vue from 'vue';
+import VueHtmlToPaper from 'vue-html-to-paper';
+// ECMA 6 - using the system import method
+import "ag-grid-community/dist/styles/ag-grid.css";
+import "ag-grid-community/dist/styles/ag-theme-alpine.css";
+import { AgGridVue } from "ag-grid-vue";
+
 export default {
   name: 'HelloWorld',
   data: function () {
   return {
+    gridApi: null,
+      columnApi: null,
+      defaultColDef: { sortable: true },
+    columnDefs: null,
+      rowData: null,
     cats:[]
   }
-}
+},
+beforeMount() {
+  window.setPrinterFriendly = function setPrinterFriendly(api) {
+  const eGridDiv = document.querySelector('#myGrid');
+  eGridDiv.style.height = '';
+  api.setDomLayout('print');
+};
+
+window.setNormal = function setNormal(api) {
+  const eGridDiv = document.querySelector('#myGrid');
+  eGridDiv.style.width = '700px';
+  eGridDiv.style.height = '200px';
+  api.setDomLayout(null);
+};
+
+    this.columnDefs = [
+      { field: "make", filter: 'agTextColumnFilter', sortable: true },
+      { field: "model" , filter: true, sortable: true},
+      { field: "price", filter: 'agNumberColumnFilter', sortable: true },
+    ];
+
+    this.rowData = [
+      { make: "Toyota", model: "Celica", price: 35000 },
+      { make: "Ford", model: "Mondeo", price: 32000 },
+      { make: "Porsche", model: "Boxter", price: 72000 },
+    ];
+  },
+components: {
+    AgGridVue,
+  }
   ,
-  created:function() {
+  created:
+  
+  function() {
+    const options = {
+  name: '_blank',
+  specs: [
+    'fullscreen=yes',
+    'titlebar=yes',
+    'scrollbars=yes'
+  ],
+  styles: [
+    'https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css',
+    'https://unpkg.com/kidlat-css/css/kidlat.css'
+  ]
+}
+    Vue.use(VueHtmlToPaper, options);
+    // or using the defaults with no stylesheet
     fetch('https://www.raymondcamden.com/.netlify/functions/get-cats')
     .then(res => res.json())
     .then(res => {
       this.cats = res;
     })
+  },
+  methods: {
+    onGridReady(params) {
+      this.gridApi = params.api;
+      this.gridColumnApi = params.columnApi;
+    },
+    onBtPrint() {
+      const api = this.gridApi;
+      setPrinterFriendly(api);
+      setTimeout(function () {
+        print();
+        setNormal(api);
+      }, 2000);
+    },
+    print () {
+      // Pass the element id here
+      this.$htmlToPaper('printMe');
+    }
   },
   props: {
     msg: String
